@@ -4,28 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Avaliação de Atendimento - King Star</title>
-	<link rel="icon" type="image/png" href="logo.png">
+    <link rel="icon" type="image/png" href="logo.png">
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .csat-card { max-width: 400px; width: 90%; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; }
         
-        /* Estilo do Logo */
-        .logo { width: 150px; margin-bottom: 20px; }
+        /* Estilo do Logo Transparente */
+        .logo { width: 160px; margin-bottom: 20px; }
         
         h2 { color: #03363d; margin-bottom: 10px; font-size: 22px; }
         p { color: #666; font-size: 15px; margin-bottom: 25px; }
+        
         .option { display: flex; align-items: center; padding: 12px; border: 1px solid #eee; margin-bottom: 10px; border-radius: 10px; cursor: pointer; transition: 0.3s; text-align: left; }
         .option:hover { background-color: #f0f7f8; border-color: #03363d; }
+        
         input[type="radio"] { margin-right: 15px; width: 20px; height: 20px; cursor: pointer; accent-color: #03363d; }
-        button { width: 100%; padding: 15px; background-color: #03363d; color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 20px; }
+        
+        button { width: 100%; padding: 15px; background-color: #03363d; color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 20px; transition: 0.2s; }
         button:hover { background-color: #022a30; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+
         #sucesso { display: none; color: #28a745; font-weight: bold; margin-top: 20px; font-size: 18px; }
     </style>
 </head>
 <body>
 
 <div class="csat-card" id="formContainer">
-    <img src="logo.png" alt="King Star" class="logo">
+    <img src="logo.png" alt="King Star Colchões" class="logo">
     
     <h2>Como foi seu atendimento?</h2>
     <p>Sua opinião é fundamental para nós!</p>
@@ -43,40 +48,72 @@
 </div>
 
 <script>
+// --- CONFIGURAÇÕES DO ZENDESK ---
+const CONFIG = {
+    subdominio: "kingstarcolchoessupport",
+    webhookId: "01KHYD42543M1KF0ST8WAVNR08",
+    fieldId: 39182752125335 // ID do campo Nota CSAT2
+};
+
 document.getElementById('btnEnviar').addEventListener('click', function() {
     const selecionada = document.querySelector('input[name="nota"]:checked');
-    if (!selecionada) return alert("Por favor, selecione uma nota antes de enviar.");
+    const btn = document.getElementById('btnEnviar');
 
+    // Validação de seleção
+    if (!selecionada) {
+        return alert("Por favor, selecione uma nota antes de enviar.");
+    }
+
+    // Pega o ID do ticket da URL (?id=12345)
     const urlParams = new URLSearchParams(window.location.search);
     const ticketId = urlParams.get('id');
-    if (!ticketId) return alert("Erro: ID do ticket não identificado na URL.");
 
-    const webhookId = "01KHYD42543M1KF0ST8WAVNR08";
-    const subdominio = "kingstarcolchoessupport";
+    if (!ticketId) {
+        return alert("Erro: ID do ticket não encontrado na URL.");
+    }
 
+    // Desabilita o botão para evitar cliques duplos
+    btn.disabled = true;
+    btn.innerText = "Enviando...";
+
+    // Monta o JSON seguindo o padrão que o Zendesk espera
     const payload = {
         "tickets": [{
             "id": ticketId,
-            "custom_fields": [{"id": 39182752125335, "value": parseInt(selecionada.value)}]
+            "custom_fields": [
+                {
+                    "id": CONFIG.fieldId, 
+                    "value": parseInt(selecionada.value)
+                }
+            ]
         }]
     };
 
-    fetch(`https://${subdominio}.zendesk.com/api/v2/webhooks/${webhookId}/invocations`, {
+    // Disparo para o Webhook do Zendesk
+    fetch(`https://${CONFIG.subdominio}.zendesk.com/api/v2/webhooks/${CONFIG.webhookId}/invocations`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json'
+        },
         body: JSON.stringify(payload)
     })
     .then(response => {
+        // O Zendesk retorna 202 Accepted quando recebe o webhook com sucesso
         if (response.ok || response.status === 202) {
             document.getElementById('ratingList').style.display = 'none';
-            document.getElementById('btnEnviar').style.display = 'none';
+            btn.style.display = 'none';
             document.getElementById('sucesso').style.display = 'block';
-            // Opcional: esconder o título e logo após sucesso
             document.querySelector('h2').style.display = 'none';
             document.querySelector('p').style.display = 'none';
         } else {
-            alert("Erro ao processar sua nota. Por favor, tente novamente.");
+            throw new Error('Falha na resposta do servidor');
         }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert("Erro ao processar sua nota. Por favor, tente novamente mais tarde.");
+        btn.disabled = false;
+        btn.innerText = "Enviar Avaliação";
     });
 });
 </script>
