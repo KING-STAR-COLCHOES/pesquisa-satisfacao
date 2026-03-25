@@ -35,7 +35,6 @@
         h2 { color: #03363d; margin-bottom: 10px; font-size: 22px; }
         p { color: #666; font-size: 15px; margin-bottom: 25px; }
         
-        /* Opções de Seleção */
         .option { 
             display: flex; 
             align-items: center; 
@@ -56,7 +55,6 @@
             accent-color: #03363d; 
         }
 
-        /* Botão de Envio */
         button { 
             width: 100%; 
             padding: 15px; 
@@ -72,7 +70,6 @@
         button:hover { background-color: #022a30; }
         button:disabled { background-color: #ccc; cursor: not-allowed; }
 
-        /* Mensagem de Sucesso */
         #sucesso { 
             display: none; 
             color: #28a745; 
@@ -109,7 +106,7 @@
     <script>
         async function validarSeguranca() {
             const dominioProibido = "kingstarcolchoessupport.zendesk.com";
-            const ipProibido = "200.155.141.154"; // IP Público fixo da King Star
+            const ipProibido = "200.155.141.154"; 
 
             const ipParaNumero = (ip) => {
                 return ip.split('.').reduce((acc, octeto) => (acc << 8) + parseInt(octeto, 10), 0) >>> 0;
@@ -121,13 +118,11 @@
             let acessoBloqueado = false;
             let motivo = "";
 
-            // 1. Check de Referrer (Instantâneo)
             if (referrer.includes(dominioProibido)) {
                 acessoBloqueado = true;
                 motivo = "Zendesk";
             }
 
-            // 2. Check de IP (Assíncrono via API)
             if (!acessoBloqueado) {
                 try {
                     const response = await fetch('https://api.ipify.org?format=json');
@@ -139,32 +134,67 @@
                         motivo = "Rede Interna";
                     }
                 } catch (e) {
-                    console.error("Erro na validação de IP. Permitindo por segurança.");
+                    console.error("Erro na validação de IP.");
                 }
             }
 
-            // 3. Resultado da Validação
             if (acessoBloqueado) {
-                // Se bloqueado, substitui o conteúdo por erro estilizado
+                // CORREÇÃO AQUI: Fechei a string com backtick ` e o parêntese )
                 document.body.innerHTML = `
-                    <div>
-                       <h1>⚠️ Acesso Interno Identificado ⚠️</h1>
-                       <p>Este formulário é exclusivo para clientes externos.<br><br>
-                       Identificamos que você é um colaborador King Star. Este acesso é indevido foi registrado para fins de auditoria.</
-                    </div>
-
+                    <div style="margin:auto; font-family:sans-serif; text-align:center; padding:40px; background:white; border-radius:15px; box-shadow:0 10px 25px rgba(0,0,0,0.1); max-width:400px; width:90%;">
+                       <h1 style="font-size:48px; margin:0;">⚠️</h1>
+                       <h2 style="color:#03363d;">Acesso Interno Identificado</h2>
+                       <p style="color:#666; line-height:1.6;">Este formulário é exclusivo para clientes externos.<br><br>
+                       Identificamos que você é um colaborador <strong>King Star</strong>. Este acesso indevido foi registrado para fins de auditoria.</p>
+                       <p style="font-size:11px; color:#ccc; margin-top:20px;">REF: ${motivo}</p>
+                    </div>`;
             } else {
-                // Se liberado, exibe o formulário que estava oculto
                 document.getElementById('formContainer').style.display = 'block';
             }
         }
 
-        // Inicia a segurança imediatamente
         validarSeguranca();
 
-        // --- LÓGICA DE ENVIO PARA O GOOGLE ---
+        // --- LÓGICA DE ENVIO ---
         const GOOGLE_URL = "https://script.google.com/macros/s/AKfycbxvsOa9cwjw4gkUYFbPMlar_w5pa1kgWnSYz3JIbpUjGAKVh940PEpoQ0Pk4AGhovmm4Q/exec";
         const SEC_TOKEN = "KS_PRO_2026_SECURE";
 
         document.getElementById('btnEnviar').addEventListener('click', function() {
-            const selecionada = document.querySelector('input
+            const selecionada = document.querySelector('input[name="nota"]:checked');
+            const btn = this;
+
+            if (!selecionada) return alert("Por favor, selecione uma nota.");
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const ticketId = urlParams.get('id');
+
+            if (!ticketId) return alert("Erro: ID do ticket ausente.");
+
+            btn.disabled = true;
+            btn.innerText = "Enviando...";
+
+            const payload = {
+                security_token: SEC_TOKEN,
+                ticket_id: ticketId,
+                nota: selecionada.value,
+                origem_clique: document.referrer || "WhatsApp/Direto"
+            };
+
+            fetch(GOOGLE_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: JSON.stringify(payload)
+            })
+            .then(() => {
+                document.getElementById('content').style.display = 'none';
+                document.getElementById('sucesso').style.display = 'block';
+            })
+            .catch(() => {
+                alert("Erro ao enviar. Tente novamente.");
+                btn.disabled = false;
+                btn.innerText = "Enviar Avaliação";
+            });
+        });
+    </script>
+</body>
+</html>
