@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" href="logo.png">
 
     <style>
-        /* 1. PREVENÇÃO DE PISCAR: O formulário começa escondido */
+        /* 1. PREVENÇÃO DE GLITCH: O formulário começa escondido */
         #formContainer { 
             display: none; 
         }
@@ -139,7 +139,6 @@
             }
 
             if (acessoBloqueado) {
-                // CORREÇÃO AQUI: Fechei a string com backtick ` e o parêntese )
                 document.body.innerHTML = `
                     <div style="margin:auto; font-family:sans-serif; text-align:center; padding:40px; background:white; border-radius:15px; box-shadow:0 10px 25px rgba(0,0,0,0.1); max-width:400px; width:90%;">
                        <h1 style="font-size:48px; margin:0;">⚠️</h1>
